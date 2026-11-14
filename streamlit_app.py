@@ -24,25 +24,16 @@ st.set_page_config(
     page_icon=":material/policy:",
     layout="centered",
 )
-_config_spec = ...
-_config_module = ...
-_config_spec.loader.exec_module(_config_module)
-# Imports below set_page_config on purpose: Streamlit requires it to be the
-# first Streamlit call in the script.
-_config_path = PROJECT_ROOT / "config.py"
-_config_spec = importlib.util.spec_from_file_location("app_config", _config_path)
-if _config_spec is None or _config_spec.loader is None:
-    raise ImportError(f"Could not load configuration from {_config_path}")
-_config_module = importlib.util.module_from_spec(_config_spec)
-sys.modules[_config_spec.name] = _config_module
-_config_spec.loader.exec_module(_config_module)
-MODE_LABELS = _config_module.MODE_LABELS
-groq_api_key = _config_module.groq_api_key
-load_environment = _config_module.load_environment
+
+
 
 # Import project modules dynamically so the workspace does not trigger static
 # "missing import" warnings for namespace packages while still loading the same
 # modules at runtime.
+config_module = importlib.import_module("core.config")
+load_environment = config_module.load_environment
+groq_api_key = config_module.groq_api_key
+MODE_LABELS = config_module.MODE_LABELS
 documents_module = importlib.import_module("core.documents")
 load_documents = documents_module.load_documents
 embeddings_module = importlib.import_module("core.embeddings")

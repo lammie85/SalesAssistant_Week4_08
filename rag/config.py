@@ -4,48 +4,32 @@ Everything the pipeline needs to know about *settings* lives here, so the
 other modules stay focused on behavior.
 """
 
-import os
+import importlib.util
+import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+PROJECT_ROOT = Path(__file__).resolve().parent
 
-# Project root = the folder that contains the `rag` package and `data/`.
-# Resolving from this file (instead of the current working directory) means
-# the pipeline works no matter where you launch it from.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_config_path = PROJECT_ROOT / "config.py"
 
-# Where the policy documents live.
-DATA_FILE_PATH = PROJECT_ROOT / "data" / "policies.txt"
+if not _config_path.exists():
+    raise FileNotFoundError(
+        f"config.py not found: {_config_path}"
+    )
 
-# Model settings.
-GROQ_MODEL = "openai/gpt-oss-120b"
-JINA_API_URL = "https://api.jina.ai/v1/embeddings"
-JINA_MODEL = "jina-embeddings-v5-text-small"
+_config_spec = importlib.util.spec_from_file_location(
+    "app_config", _config_path
+)
 
-# Chunking settings.
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+if _config_spec is None or _config_spec.loader is None:
+    raise ImportError("Unable to load config.py")
 
-# Retrieval settings: how many chunks the search_policy tool fetches.
-RETRIEVER_K = 3
+_config_module = importlib.util.module_from_spec(_config_spec)
 
+sys.modules["app_config"] = _config_module
 
-class ConfigError(RuntimeError):
-    """Raised when the environment is not usable (e.g. a missing API key)."""
+_config_spec.loader.exec_module(_config_module)
 
-
-def load_env() -> None:
-    """Load variables from the project's .env file (no-op if it is absent)."""
-    load_dotenv(PROJECT_ROOT / ".env")
-
-
-def require_key(name: str) -> str:
-    """Return the API key stored under `name`, or raise a clear ConfigError."""
-    load_env()
-    value = os.getenv(name)
-    if not value:
-        raise ConfigError(
-            f"Missing {name}. Add it to {PROJECT_ROOT / '.env'} as "
-            f"`{name}=your_key`, then restart the app."
-        )
-    return value
+MODE_LABELS = _config_module.MODE_LABELS
+groq_api_key = _config_module.groq_api_key
+load_environment = _config_module.load_environment
