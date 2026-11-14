@@ -24,7 +24,9 @@ st.set_page_config(
     page_icon=":material/policy:",
     layout="centered",
 )
-
+_config_spec = ...
+_config_module = ...
+_config_spec.loader.exec_module(_config_module)
 # Imports below set_page_config on purpose: Streamlit requires it to be the
 # first Streamlit call in the script.
 _config_path = PROJECT_ROOT / "config.py"
