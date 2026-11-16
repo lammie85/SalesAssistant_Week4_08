@@ -30,9 +30,9 @@ st.set_page_config(
 # Import project modules dynamically so the workspace does not trigger static
 # "missing import" warnings for namespace packages while still loading the same
 # modules at runtime.
-config_module = importlib.import_module("rag.config")
-load_environment = config_module.load_env
-groq_api_key = config_module.require_key("GROQ_API_KEY")
+config_module = importlib.import_module("core.config")
+load_environment = config_module.load_environment
+groq_api_key = config_module.groq_api_key
 MODE_LABELS = config_module.MODE_LABELS
 documents_module = importlib.import_module("core.documents")
 load_documents = documents_module.load_documents
