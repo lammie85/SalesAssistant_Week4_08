@@ -4,32 +4,48 @@ Everything the pipeline needs to know about *settings* lives here, so the
 other modules stay focused on behavior.
 """
 
-import importlib.util
-import sys
+import os
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+from dotenv import load_dotenv
 
-_config_path = PROJECT_ROOT / "config.py"
+# Project root = the folder that contains the `rag` package and `data/`.
+# Resolving from this file (instead of the current working directory) means
+# the pipeline works no matter where you launch it from.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-if not _config_path.exists():
-    raise FileNotFoundError(
-        f"config.py not found: {_config_path}"
-    )
+# Where the policy documents live.
+DATA_FILE_PATH = PROJECT_ROOT / "data" / "policies.txt"
 
-_config_spec = importlib.util.spec_from_file_location(
-    "app_config", _config_path
-)
+# Model settings.
+GROQ_MODEL = "openai/gpt-oss-120b"
+JINA_API_URL = "https://api.jina.ai/v1/embeddings"
+JINA_MODEL = "jina-embeddings-v5-text-small"
 
-if _config_spec is None or _config_spec.loader is None:
-    raise ImportError("Unable to load config.py")
+# Chunking settings.
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
 
-_config_module = importlib.util.module_from_spec(_config_spec)
+# Retrieval settings: how many chunks the search_policy tool fetches.
+RETRIEVER_K = 3
 
-sys.modules["app_config"] = _config_module
 
-_config_spec.loader.exec_module(_config_module)
+class ConfigError(RuntimeError):
+    """Raised when the environment is not usable (e.g. a missing API key)."""
 
-MODE_LABELS = _config_module.MODE_LABELS
-groq_api_key = _config_module.groq_api_key
-load_environment = _config_module.load_environment
+
+def load_env() -> None:
+    """Load variables from the project's .env file (no-op if it is absent)."""
+    load_dotenv(PROJECT_ROOT / ".env")
+
+
+def require_key(name: str) -> str:
+    """Return the API key stored under `name`, or raise a clear ConfigError."""
+    load_env()
+    value = os.getenv(name)
+    if not value:
+        raise ConfigError(
+            f"Missing {name}. Add it to {PROJECT_ROOT / '.env'} as "
+            f"`{name}=your_key`, then restart the app."
+        )
+    return value

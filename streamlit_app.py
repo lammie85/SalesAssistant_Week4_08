@@ -31,8 +31,8 @@ st.set_page_config(
 # "missing import" warnings for namespace packages while still loading the same
 # modules at runtime.
 config_module = importlib.import_module("rag.config")
-load_environment = config_module.load_environment
-groq_api_key = config_module.groq_api_key
+load_environment = config_module.load_env
+groq_api_key = config_module.require_key("GROQ_API_KEY")
 MODE_LABELS = config_module.MODE_LABELS
 documents_module = importlib.import_module("core.documents")
 load_documents = documents_module.load_documents
@@ -72,16 +72,29 @@ def load_index(chunk_size: int, chunk_overlap: int):
     return store, documents
 
 
-def _hydrate_secrets() -> None:
-    """Allow GROQ_API_KEY from .streamlit/secrets.toml (handy when deploying)."""
-    if groq_api_key():
-        return
+def _hydrate_secrets():
+    """Populate the process environment from Streamlit secrets if available."""
     try:
         value = st.secrets.get("GROQ_API_KEY")
-    except Exception:  # no secrets.toml at all — that is fine
+    except Exception:
         return
+
     if value:
         os.environ["GROQ_API_KEY"] = str(value)
+
+
+def groq_api_key():
+    load_environment()
+    _hydrate_secrets()
+
+    try:
+        value = st.secrets.get("GROQ_API_KEY")
+        if value:
+            return str(value)
+    except Exception:
+        pass
+
+    return os.getenv("GROQ_API_KEY")
 
 
 _hydrate_secrets()
